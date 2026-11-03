@@ -59,7 +59,7 @@ python3 "$HOME/.local/share/.skeletor/install.py" run
 ```
 
 ```powershell
-python "$env:LOCALAPPDATA\.skeletor\install.py" run
+py "$env:LOCALAPPDATA\.skeletor\install.py" run
 ```
 
 From a checkout, that is `python3 install.py run`.
@@ -73,7 +73,7 @@ python3 "$HOME/.local/share/.skeletor/install.py" erase
 ```
 
 ```powershell
-python "$env:LOCALAPPDATA\.skeletor\install.py" erase
+py "$env:LOCALAPPDATA\.skeletor\install.py" erase
 ```
 
 Or by hand:
