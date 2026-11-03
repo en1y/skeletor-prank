@@ -13,7 +13,7 @@ import subprocess
 from fractions import Fraction
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-FILES = ("skeletor.py", "skeleton.mp4")
+FILES = ("install.py", "skeletor.py", "skeleton.mp4")
 
 
 def dest():
@@ -74,8 +74,10 @@ def install():
     )
     folder = dest()
     os.makedirs(folder, exist_ok=True)
-    for name in FILES:
-        shutil.copy2(os.path.join(HERE, name), os.path.join(folder, name))
+    # Re-running the installed copy: the files are already there.
+    if not os.path.samefile(HERE, folder):
+        for name in FILES:
+            shutil.copy2(os.path.join(HERE, name), os.path.join(folder, name))
     with open(os.path.join(folder, "settings.json"), "w") as f:
         json.dump({"check_every": every, "chance": chance}, f)
     runner = os.path.join(folder, "skeletor.py")
@@ -105,8 +107,12 @@ def install():
         print("averages one strike every %.1f minutes" % (every / chance / 60))
     else:
         print("chance is 0, so it never strikes")
-    print("starts at next login. test now: python3 install.py run")
-    print("erase: python3 install.py erase")
+    if not shutil.which("mpv"):
+        print("no mpv found, so it will show a green background. install mpv to make it see-through")
+    me = os.path.join(folder, "install.py")
+    print("starts at next login")
+    print('test now: "%s" "%s" run' % (sys.executable, me))
+    print('erase: "%s" "%s" erase' % (sys.executable, me))
 
 
 def subprocess_hide(folder):
