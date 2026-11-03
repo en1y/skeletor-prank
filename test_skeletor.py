@@ -10,6 +10,7 @@ import json
 import os
 import random
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -176,7 +177,7 @@ assert answers("") == 1 / 60
 assert answers() == 1 / 60
 
 # Already installed: it offers new timings or erase, and anything else changes nothing.
-home = tempfile.mkdtemp()
+home = tempfile.mkdtemp(prefix="Ivančić Жанна 日本語 ")
 folder = os.path.join(home, "skeletor")
 link = os.path.join(home, "autostart", "skeletor.desktop")
 install.dest = lambda: folder
@@ -207,6 +208,50 @@ run_install("20", "1/2")
 os.remove(link)
 assert len(run_install()) == 2
 assert os.path.exists(link)
+
+# Any character in a path installs fine, even where the default encoding can't write it.
+real_open = builtins.open
+
+
+def code_page_open(file, mode="r", buffering=-1, encoding=None, **kw):
+    return real_open(file, mode, buffering, encoding or (None if "b" in mode else "ascii"), **kw)
+
+
+builtins.open = code_page_open
+run_install("2")
+run_install("20", "1/2")
+builtins.open = real_open
+with open(link, encoding="utf-8") as f:
+    assert folder in f.read()
+with open(os.path.join(folder, "REMOVE.txt"), encoding="utf-8") as f:
+    assert link in f.read()
+
+# Login entries keep every path intact, on both systems.
+real_platform = sys.platform
+sys.platform = "win32"
+assert install.login_entry("C:\\Ivančić\\pythonw.exe", "C:\\100%\\Жанна\\skeletor.py") == (
+    '@echo off\nchcp 65001 >nul\nstart "" "C:\\Ivančić\\pythonw.exe" "C:\\100%%\\Жанна\\skeletor.py"\n'
+)
+# Inside the profile, the entry stays plain ASCII so no code page can garble it.
+os.environ["LOCALAPPDATA"] = "C:\\Users\\Ivančić\\AppData\\Local"
+entry = install.login_entry(
+    "C:\\Users\\Ivančić\\AppData\\Local\\Programs\\Python\\pythonw.exe",
+    "C:\\USERS\\IVANČIĆ\\AppData\\Local\\.skeletor\\skeletor.py",
+)
+assert entry.isascii() and '"%LOCALAPPDATA%\\.skeletor\\skeletor.py"' in entry, entry
+os.environ["LOCALAPPDATA"] = "C:\\Users\\Ivan"
+assert "%LOCALAPPDATA%" not in install.batch_path("C:\\Users\\Ivančić\\x"), "only whole folder names match"
+del os.environ["LOCALAPPDATA"]
+sys.platform = "linux"
+entry = install.login_entry("/usr/bin/python3", '/home/Жанна/a "b" $c 100%/skeletor.py')
+assert 'Exec="/usr/bin/python3" "/home/Жанна/a \\\\"b\\\\" \\\\$c 100%%/skeletor.py"\n' in entry
+sys.platform = real_platform
+
+# Printing those paths to a pipe doesn't crash either. All the install paths point at a temp folder.
+piped = tempfile.mkdtemp(prefix="Ivančić Жанна 日本語 ")
+env = dict(os.environ, HOME=piped, USERPROFILE=piped, LOCALAPPDATA=piped, APPDATA=piped, PYTHONIOENCODING="ascii")
+result = subprocess.run([sys.executable, "-B", install.__file__, "erase"], env=env, capture_output=True)
+assert result.returncode == 0 and "Ivančić Жанна 日本語".encode() in result.stdout, result
 
 # The Windows frames fit the screen area and are premultiplied, or they'd show bright edges.
 head, data = skeletor.load_frames()

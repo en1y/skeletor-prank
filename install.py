@@ -86,6 +86,38 @@ def save_timings(every, chance):
         print("chance is 0, so it never strikes")
 
 
+def desktop_quote(path):
+    """Quote an Exec argument, following the Desktop Entry spec's escaping rules."""
+    for ch in ("\\", '"', "`", "$"):
+        path = path.replace(ch, "\\" + ch)
+    return '"%s"' % path.replace("\\", "\\\\").replace("%", "%%")
+
+
+def batch_path(path):
+    """A path for a batch file. cmd reads those in the console's code page and garbles
+    non-English letters, but not ones that arrive through a variable."""
+    for var in ("LOCALAPPDATA", "APPDATA", "USERPROFILE"):
+        prefix = os.environ.get(var, "").rstrip("\\") + "\\"
+        if len(prefix) > 1 and path[:len(prefix)].lower() == prefix.lower():
+            return '"%%%s%%\\%s"' % (var, path[len(prefix):].replace("%", "%%"))
+    return '"%s"' % path.replace("%", "%%")
+
+
+def login_entry(py, runner):
+    """The text of the login autostart file."""
+    if sys.platform.startswith("win"):
+        # chcp is for a path no variable covers, like Python installed outside the profile.
+        return '@echo off\nchcp 65001 >nul\nstart "" %s %s\n' % (batch_path(py), batch_path(runner))
+    return (
+        "[Desktop Entry]\n"
+        "Type=Application\n"
+        "Name=skeletor\n"
+        "Exec=%s %s\n"
+        "Terminal=false\n"
+        "NoDisplay=true\n" % (desktop_quote(py), desktop_quote(runner))
+    )
+
+
 def is_installed():
     # Needs both: if one is gone, a normal install puts it back.
     return os.path.exists(os.path.join(dest(), "skeletor.py")) and os.path.exists(autostart())
@@ -127,21 +159,12 @@ def install():
     py = python_exe()
     link = autostart()
     os.makedirs(os.path.dirname(link), exist_ok=True)
-    if sys.platform.startswith("win"):
-        with open(link, "w", newline="\r\n") as f:
-            f.write('@echo off\r\nstart "" "%s" "%s"\r\n' % (py, runner))
+    windows = sys.platform.startswith("win")
+    with open(link, "w", encoding="utf-8", newline="\r\n" if windows else "\n") as f:
+        f.write(login_entry(py, runner))
+    if windows:
         subprocess_hide(folder)
-    else:
-        with open(link, "w") as f:
-            f.write(
-                "[Desktop Entry]\n"
-                "Type=Application\n"
-                "Name=skeletor\n"
-                "Exec=%s %s\n"
-                "Terminal=false\n"
-                "NoDisplay=true\n" % (py, runner)
-            )
-    with open(os.path.join(folder, "REMOVE.txt"), "w") as f:
+    with open(os.path.join(folder, "REMOVE.txt"), "w", encoding="utf-8") as f:
         f.write("delete this folder and delete:\n%s\n" % link)
     print("installed")
     print(folder)
@@ -223,6 +246,9 @@ def menu():
 
 
 def main():
+    # Piped output otherwise uses the Windows code page, which can't print every path.
+    if sys.stdout:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     # ponytail: one hidden folder, one autostart file. both paths are printed.
     assert dest().endswith(".skeletor")
     assert os.path.basename(autostart()).startswith("skeletor.")

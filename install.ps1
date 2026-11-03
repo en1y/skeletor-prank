@@ -22,12 +22,16 @@
 
     $dir = Join-Path $env:TEMP ("skeletor-" + [guid]::NewGuid().ToString("n"))
     New-Item -ItemType Directory -Path $dir | Out-Null
+    $encoding = [Console]::OutputEncoding
     try {
         foreach ($f in "install.py", "skeletor.py", "skeleton.mp4", "skeleton.frames", "skeleton.wav") {
             Invoke-WebRequest -UseBasicParsing -Uri "$raw/$f" -OutFile (Join-Path $dir $f)
         }
+        # Python prints UTF-8, so paths only show correctly if PowerShell reads it as UTF-8.
+        try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { }
         & $py (Join-Path $dir "install.py") install
     } finally {
+        try { [Console]::OutputEncoding = $encoding } catch { }
         Remove-Item -Recurse -Force $dir -ErrorAction SilentlyContinue
     }
 }
