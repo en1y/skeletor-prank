@@ -208,4 +208,14 @@ os.remove(link)
 assert len(run_install()) == 2
 assert os.path.exists(link)
 
+# The Windows frames fit the screen area and are premultiplied, or they'd show bright edges.
+head, data = skeletor.load_frames()
+box_w, box_h = head["box"]
+spots = [s for s in head["frames"] if s]
+assert spots and len(data) == len(spots) * box_w * box_h * 4
+assert all(0 <= x <= head["width"] - box_w and 0 <= y <= head["height"] - box_h for x, y, _ in spots)
+assert [i for _, _, i in spots] == list(range(len(spots)))
+assert all(max(data[p:p + 3]) <= data[p + 3] for p in range(0, len(data), 4 * 997))
+assert any(data[3::4]) and data.count(0) > len(data) // 2
+
 print("ok")

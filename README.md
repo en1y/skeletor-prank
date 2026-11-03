@@ -18,7 +18,7 @@ Windows, in PowerShell:
 irm https://raw.githubusercontent.com/en1y/skeletor-prank/main/install.ps1 | iex
 ```
 
-It asks how often to roll the dice and the chance of a strike on each roll, saves your answers on this computer, and starts at your next login. It needs Python 3, plus `mpv` for the see-through effect.
+It asks how often to roll the dice and the chance of a strike on each roll, saves your answers on this computer, and starts at your next login. It needs Python 3, plus `mpv` on Linux for the see-through effect.
 
 Run the same line again on a computer that already has it, and it offers to change the timings or erase it.
 
@@ -26,7 +26,7 @@ Run the same line again on a computer that already has it, and it offers to chan
 
 `bad_to_the_bone.mp3` is the first 2 seconds of the clip (the riff). That audio is already inside `skeleton.mp4`.
 
-The green in `skeleton.mp4` turns transparent as it plays, so the skeleton runs over your apps and clicks pass through to them. This needs `mpv`; any other player shows the green background. A replacement clip needs the same green, or change `chromakey` in `skeletor.py`.
+The green in `skeleton.mp4` turns transparent as it plays, so the skeleton runs over your apps and clicks pass through to them. On Linux this needs `mpv`; any other player shows the green background. Windows needs nothing extra: a click-through window plays `skeleton.frames` and `skeleton.wav`, which `build_overlay.py` makes from the clip. A replacement clip needs the same green, or change `chromakey` in `skeletor.py`, then rerun `build_overlay.py`.
 
 It installs into a dot-folder and one login entry, so it is not sitting on the desktop. Erase deletes that folder and that entry. Paths:
 

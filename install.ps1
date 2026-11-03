@@ -23,7 +23,7 @@
     $dir = Join-Path $env:TEMP ("skeletor-" + [guid]::NewGuid().ToString("n"))
     New-Item -ItemType Directory -Path $dir | Out-Null
     try {
-        foreach ($f in "install.py", "skeletor.py", "skeleton.mp4") {
+        foreach ($f in "install.py", "skeletor.py", "skeleton.mp4", "skeleton.frames", "skeleton.wav") {
             Invoke-WebRequest -UseBasicParsing -Uri "$raw/$f" -OutFile (Join-Path $dir $f)
         }
         & $py (Join-Path $dir "install.py") install

@@ -14,6 +14,8 @@ from fractions import Fraction
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FILES = ("install.py", "skeletor.py", "skeleton.mp4")
+if sys.platform.startswith("win"):
+    FILES += ("skeleton.frames", "skeleton.wav")
 
 
 def dest():
@@ -145,7 +147,7 @@ def install():
     print(folder)
     print(link)
     save_timings(every, chance)
-    if not shutil.which("mpv"):
+    if not sys.platform.startswith("win") and not shutil.which("mpv"):
         print("no mpv found, so it will show a green background. install mpv to make it see-through")
     me = os.path.join(folder, "install.py")
     print("starts at next login")
