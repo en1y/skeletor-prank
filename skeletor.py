@@ -28,14 +28,17 @@ CHECK_EVERY = 60   # seconds: 1 rolls every second, 60 every minute
 CHANCE = 1 / 60    # 1/60 a minute averages one strike an hour
 
 
-def load_settings():
-    """(check_every, chance) from settings.json, or the defaults if it's missing or broken."""
+def load_settings(folder):
+    """(check_every, chance) from folder's settings.json, or the defaults if missing or broken."""
     try:
-        with open(os.path.join(HERE, "settings.json")) as f:
+        with open(os.path.join(folder, "settings.json")) as f:
             saved = json.load(f)
-        return float(saved["check_every"]), float(saved["chance"])
+        every, chance = float(saved["check_every"]), float(saved["chance"])
     except (OSError, ValueError, KeyError, TypeError):
         return CHECK_EVERY, CHANCE
+    if 1 <= every <= 86400 and 0 <= chance <= 1:
+        return every, chance
+    return CHECK_EVERY, CHANCE
 
 
 def sh(*cmd):
@@ -182,8 +185,9 @@ def main():
             f.write(str(os.getpid()))
     except OSError:
         pass
-    check_every, chance = load_settings()
     while True:
+        # Read every time, so new timings apply without a restart.
+        check_every, chance = load_settings(HERE)
         time.sleep(check_every)
         if random.random() < chance:
             jumpscare()

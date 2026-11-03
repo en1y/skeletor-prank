@@ -48,7 +48,7 @@ def ask(prompt, default, valid, rule):
         try:
             answer = input("%s [%s]: " % (prompt, default)).strip() or default
         except EOFError:
-            answer = default
+            return float(Fraction(default))
         try:
             value = Fraction(answer)
             if valid(value):
@@ -58,28 +58,69 @@ def ask(prompt, default, valid, rule):
         print(rule)
 
 
+def ask_timings():
+    """(check_every, chance), where Enter keeps what's saved, or the defaults if nothing is."""
+    import skeletor
+    every, chance = skeletor.load_settings(dest())
+    show = lambda x: str(Fraction(x).limit_denominator(10 ** 6))
+    return (
+        ask(
+            "seconds between rolls", show(every),
+            lambda v: 1 <= v <= 86400, "use a number from 1 to 86400",
+        ),
+        ask(
+            "chance of a strike on each roll, like 1/60 or 0.02", show(chance),
+            lambda v: 0 <= v <= 1, "use a number from 0 to 1, like 1/60 or 0.02",
+        ),
+    )
+
+
+def save_timings(every, chance):
+    with open(os.path.join(dest(), "settings.json"), "w") as f:
+        json.dump({"check_every": every, "chance": chance}, f)
+    if chance:
+        print("averages one strike every %.1f minutes" % (every / chance / 60))
+    else:
+        print("chance is 0, so it never strikes")
+
+
+def is_installed():
+    # Needs both: if one is gone, a normal install puts it back.
+    return os.path.exists(os.path.join(dest(), "skeletor.py")) and os.path.exists(autostart())
+
+
+def already_installed():
+    print("skeletor is already installed")
+    print("  1  change timings")
+    print("  2  erase")
+    print("  3  leave it as it is")
+    try:
+        choice = input("> ").strip().lower()
+    except EOFError:
+        choice = ""
+    if choice in ("1", "change", "timings"):
+        save_timings(*ask_timings())
+        print("the runner picks this up after its next roll")
+    elif choice in ("2", "erase", "remove"):
+        erase()
+    else:
+        print("nothing done")
+
+
 def install():
+    if is_installed():
+        already_installed()
+        return
     missing = [n for n in FILES if not os.path.exists(os.path.join(HERE, n))]
     if missing:
         sys.exit("missing next to install.py: " + ", ".join(missing))
-    import skeletor  # for its defaults
-    every = ask(
-        "seconds between rolls", str(skeletor.CHECK_EVERY),
-        lambda v: 1 <= v <= 86400, "use a number from 1 to 86400",
-    )
-    chance = ask(
-        "chance of a strike on each roll, like 1/60 or 0.02",
-        str(Fraction(skeletor.CHANCE).limit_denominator(10 ** 6)),
-        lambda v: 0 <= v <= 1, "use a number from 0 to 1, like 1/60 or 0.02",
-    )
+    every, chance = ask_timings()
     folder = dest()
     os.makedirs(folder, exist_ok=True)
     # Re-running the installed copy: the files are already there.
     if not os.path.samefile(HERE, folder):
         for name in FILES:
             shutil.copy2(os.path.join(HERE, name), os.path.join(folder, name))
-    with open(os.path.join(folder, "settings.json"), "w") as f:
-        json.dump({"check_every": every, "chance": chance}, f)
     runner = os.path.join(folder, "skeletor.py")
     py = python_exe()
     link = autostart()
@@ -103,10 +144,7 @@ def install():
     print("installed")
     print(folder)
     print(link)
-    if chance:
-        print("averages one strike every %.1f minutes" % (every / chance / 60))
-    else:
-        print("chance is 0, so it never strikes")
+    save_timings(every, chance)
     if not shutil.which("mpv"):
         print("no mpv found, so it will show a green background. install mpv to make it see-through")
     me = os.path.join(folder, "install.py")

@@ -20,6 +20,8 @@ irm https://raw.githubusercontent.com/en1y/skeletor-prank/main/install.ps1 | iex
 
 It asks how often to roll the dice and the chance of a strike on each roll, saves your answers on this computer, and starts at your next login. It needs Python 3, plus `mpv` for the see-through effect.
 
+Run the same line again on a computer that already has it, and it offers to change the timings or erase it.
+
 ## how it works
 
 `bad_to_the_bone.mp3` is the first 2 seconds of the clip (the riff). That audio is already inside `skeleton.mp4`.
@@ -44,7 +46,7 @@ Install asks for two numbers. Every so many seconds it rolls the dice, and the c
 | once a day | `60` | `1/1440` |
 | once an hour, rolling every second | `1` | `1/3600` |
 
-These are averages, so two strikes can land close together. To change them, run the install line again or edit `settings.json` in the install folder, then log back in so the runner picks up the change. Running `skeletor.py` from a checkout without `settings.json` uses the defaults at the top of the file.
+These are averages, so two strikes can land close together. To change them, run the install line again and pick `1`, or edit `settings.json` in the install folder. The runner picks up the change after its next roll. Running `skeletor.py` from a checkout without `settings.json` uses the defaults at the top of the file.
 
 ## test
 

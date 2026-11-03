@@ -124,18 +124,48 @@ assert len(strikes) == 1, strikes
 assert slept == [3] * 3, slept
 with open(settings, "w") as f:
     f.write("not json")
-assert skeletor.load_settings() == (7, 0.25)
+assert skeletor.load_settings(skeletor.HERE) == (7, 0.25)
+with open(settings, "w") as f:
+    json.dump({"check_every": 0, "chance": 0.5}, f)
+assert skeletor.load_settings(skeletor.HERE) == (7, 0.25)
+
+
+# New timings reach a runner that's already going, after its next roll.
+def sleep_then_edit(seconds):
+    slept.append(seconds)
+    with open(settings, "w") as f:
+        json.dump({"check_every": 9, "chance": 0.75}, f)
+
+
+with open(settings, "w") as f:
+    json.dump({"check_every": 3, "chance": 0.75}, f)
+del slept[:]
+rolls = iter([0.9])
+time.sleep = sleep_then_edit
+try:
+    skeletor.main()
+except StopIteration:
+    pass
+assert slept == [3, 9], slept
+
 
 # The installer keeps asking until an answer fits. Enter or no terminal takes the default.
-def answers(*typed):
+def typing(*typed):
     pending = iter(typed)
+    prompts = []
 
     def fake_input(prompt):
+        prompts.append(prompt)
         for answer in pending:
             return answer
         raise EOFError
 
     builtins.input = fake_input
+    return prompts
+
+
+def answers(*typed):
+    typing(*typed)
     with contextlib.redirect_stdout(io.StringIO()):
         return install.ask("q", "1/60", lambda v: 0 <= v <= 1, "rule")
 
@@ -144,5 +174,38 @@ assert answers("abc", "1/0", "2", "-1", "1/4") == 0.25
 assert answers("0.5") == 0.5
 assert answers("") == 1 / 60
 assert answers() == 1 / 60
+
+# Already installed: it offers new timings or erase, and anything else changes nothing.
+home = tempfile.mkdtemp()
+folder = os.path.join(home, "skeletor")
+link = os.path.join(home, "autostart", "skeletor.desktop")
+install.dest = lambda: folder
+install.autostart = lambda: link
+
+
+def run_install(*typed):
+    prompts = typing(*typed)
+    with contextlib.redirect_stdout(io.StringIO()):
+        install.install()
+    return prompts
+
+
+assert len(run_install("20", "1/2")) == 2
+assert skeletor.load_settings(folder) == (20, 0.5)
+for typed in ([""], ["3"], ["nonsense"], []):
+    assert len(run_install(*typed)) == 1, typed
+    assert skeletor.load_settings(folder) == (20, 0.5), typed
+    assert os.path.exists(link), typed
+prompts = run_install("1", "", "1/4")
+assert "[20]" in prompts[1] and "[1/2]" in prompts[2], prompts
+assert skeletor.load_settings(folder) == (20, 0.25)
+run_install("2")
+assert not os.path.exists(folder) and not os.path.exists(link)
+
+# Half an install isn't installed: a normal install puts the missing part back.
+run_install("20", "1/2")
+os.remove(link)
+assert len(run_install()) == 2
+assert os.path.exists(link)
 
 print("ok")
