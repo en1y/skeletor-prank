@@ -6,9 +6,11 @@ Erase deletes both and stops the runner. Nothing else.
 """
 import os
 import sys
+import json
 import shutil
 import signal
 import subprocess
+from fractions import Fraction
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FILES = ("skeletor.py", "skeleton.mp4")
@@ -40,14 +42,42 @@ def python_exe():
     return shutil.which("python3") or sys.executable
 
 
+def ask(prompt, default, valid, rule):
+    """Ask until the answer fits the rule. Enter, or no terminal, takes the default."""
+    while True:
+        try:
+            answer = input("%s [%s]: " % (prompt, default)).strip() or default
+        except EOFError:
+            answer = default
+        try:
+            value = Fraction(answer)
+            if valid(value):
+                return float(value)
+        except (ValueError, ZeroDivisionError):
+            pass
+        print(rule)
+
+
 def install():
     missing = [n for n in FILES if not os.path.exists(os.path.join(HERE, n))]
     if missing:
         sys.exit("missing next to install.py: " + ", ".join(missing))
+    import skeletor  # for its defaults
+    every = ask(
+        "seconds between rolls", str(skeletor.CHECK_EVERY),
+        lambda v: 1 <= v <= 86400, "use a number from 1 to 86400",
+    )
+    chance = ask(
+        "chance of a strike on each roll, like 1/60 or 0.02",
+        str(Fraction(skeletor.CHANCE).limit_denominator(10 ** 6)),
+        lambda v: 0 <= v <= 1, "use a number from 0 to 1, like 1/60 or 0.02",
+    )
     folder = dest()
     os.makedirs(folder, exist_ok=True)
     for name in FILES:
         shutil.copy2(os.path.join(HERE, name), os.path.join(folder, name))
+    with open(os.path.join(folder, "settings.json"), "w") as f:
+        json.dump({"check_every": every, "chance": chance}, f)
     runner = os.path.join(folder, "skeletor.py")
     py = python_exe()
     link = autostart()
@@ -71,6 +101,10 @@ def install():
     print("installed")
     print(folder)
     print(link)
+    if chance:
+        print("averages one strike every %.1f minutes" % (every / chance / 60))
+    else:
+        print("chance is 0, so it never strikes")
     print("starts at next login. test now: python3 install.py run")
     print("erase: python3 install.py erase")
 

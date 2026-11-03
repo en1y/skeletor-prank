@@ -3,12 +3,18 @@
 
     python3 test_skeletor.py
 """
+import builtins
+import contextlib
+import io
+import json
+import os
 import random
 import shutil
 import sys
 import tempfile
 import time
 
+import install
 import skeletor
 
 
@@ -103,5 +109,40 @@ except StopIteration:
     pass
 assert len(strikes) == 1, strikes
 assert slept == [7] * 5, slept
+
+# settings.json from the installer beats the defaults, and a broken one falls back to them.
+settings = os.path.join(skeletor.HERE, "settings.json")
+with open(settings, "w") as f:
+    json.dump({"check_every": 3, "chance": 0.75}, f)
+del strikes[:], slept[:]
+rolls = iter([0.9, 0.5])
+try:
+    skeletor.main()
+except StopIteration:
+    pass
+assert len(strikes) == 1, strikes
+assert slept == [3] * 3, slept
+with open(settings, "w") as f:
+    f.write("not json")
+assert skeletor.load_settings() == (7, 0.25)
+
+# The installer keeps asking until an answer fits. Enter or no terminal takes the default.
+def answers(*typed):
+    pending = iter(typed)
+
+    def fake_input(prompt):
+        for answer in pending:
+            return answer
+        raise EOFError
+
+    builtins.input = fake_input
+    with contextlib.redirect_stdout(io.StringIO()):
+        return install.ask("q", "1/60", lambda v: 0 <= v <= 1, "rule")
+
+
+assert answers("abc", "1/0", "2", "-1", "1/4") == 0.25
+assert answers("0.5") == 0.5
+assert answers("") == 1 / 60
+assert answers() == 1 / 60
 
 print("ok")

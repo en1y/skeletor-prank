@@ -12,6 +12,7 @@ Remove it with the script in the README, or: python3 install.py erase
 import os
 import re
 import sys
+import json
 import time
 import random
 import shutil
@@ -21,9 +22,20 @@ import subprocess
 HERE = os.path.dirname(os.path.abspath(__file__))
 VIDEO = os.path.join(HERE, "skeleton.mp4")
 
-# Settings. Every CHECK_EVERY seconds it rolls the dice, and CHANCE is the odds of a strike.
+# Defaults, used unless install.py saved settings.json next to this file.
+# Every CHECK_EVERY seconds it rolls the dice, and CHANCE is the odds of a strike.
 CHECK_EVERY = 60   # seconds: 1 rolls every second, 60 every minute
 CHANCE = 1 / 60    # 1/60 a minute averages one strike an hour
+
+
+def load_settings():
+    """(check_every, chance) from settings.json, or the defaults if it's missing or broken."""
+    try:
+        with open(os.path.join(HERE, "settings.json")) as f:
+            saved = json.load(f)
+        return float(saved["check_every"]), float(saved["chance"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return CHECK_EVERY, CHANCE
 
 
 def sh(*cmd):
@@ -170,9 +182,10 @@ def main():
             f.write(str(os.getpid()))
     except OSError:
         pass
+    check_every, chance = load_settings()
     while True:
-        time.sleep(CHECK_EVERY)
-        if random.random() < CHANCE:
+        time.sleep(check_every)
+        if random.random() < chance:
             jumpscare()
 
 
