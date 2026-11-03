@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""skeletor — every so often the skeleton gets you: fullscreen clip + max volume.
+"""skeletor — every so often the skeleton gets you: see-through clip + max volume.
 
 Harmless meme. Runs a loop, sleeps a random while, then strikes.
 Remove it with the script in the README, or: python3 install.py erase
@@ -43,9 +43,23 @@ def max_volume():
 
 
 def play():
+    # ponytail: mpv keys out the clip's green live, so the video stays a plain mp4.
+    # crop trims the black lines on the clip's edges, despill removes the green fringe.
+    # knob: chromakey similarity:blend. raise if green shows, lower if bones vanish.
+    # ceiling: only mpv does this, the players below show the green background.
+    # no key bindings: a stray space would pause it, leaving an invisible fullscreen window.
+    overlay = [
+        "mpv", "--fs", "--really-quiet", "--no-config", "--no-osc",
+        "--no-input-default-bindings", "--input-cursor-passthrough=yes",
+        "--background=none", "--border-background=none",
+        "--vf=lavfi=[crop=iw-16:ih-16:8:8,format=rgba,chromakey=0x00D506:0.2:0.05,despill=type=green]",
+        VIDEO,
+    ]
+    if sys.platform.startswith("win"):
+        overlay.insert(1, "--d3d11-flip=no")  # mpv needs this for transparency on d3d11
     # First player that's actually installed wins; each goes fullscreen + exits.
     for p in (
-        ["mpv", "--fs", "--really-quiet", VIDEO],
+        overlay,
         ["ffplay", "-fs", "-autoexit", "-loglevel", "quiet", VIDEO],
         ["vlc", "--fullscreen", "--play-and-exit", "--no-video-title-show", VIDEO],
     ):
