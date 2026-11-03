@@ -3,7 +3,11 @@
 
     python3 test_skeletor.py
 """
+import random
 import shutil
+import sys
+import tempfile
+import time
 
 import skeletor
 
@@ -83,5 +87,21 @@ try:
 except RuntimeError:
     pass
 assert restored == [True]
+
+# The loop rolls every CHECK_EVERY seconds and strikes only when the roll is under CHANCE.
+strikes, slept = [], []
+rolls = iter([0.9, 0.25, 0.1, 0.5])
+skeletor.HERE = tempfile.mkdtemp()
+skeletor.CHECK_EVERY, skeletor.CHANCE = 7, 0.25
+skeletor.jumpscare = lambda: strikes.append(True)
+time.sleep = slept.append
+random.random = lambda: next(rolls)
+sys.argv = ["skeletor.py"]
+try:
+    skeletor.main()
+except StopIteration:
+    pass
+assert len(strikes) == 1, strikes
+assert slept == [7] * 5, slept
 
 print("ok")

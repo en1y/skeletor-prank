@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """skeletor — every so often the skeleton gets you: see-through clip + max volume.
 
-Harmless meme. Runs a loop, sleeps a random while, then strikes.
+Harmless meme. Runs a loop, rolls the dice every so often, strikes when it hits.
 The volume goes back where it was after each strike.
 Remove it with the script in the README, or: python3 install.py erase
 
@@ -21,8 +21,9 @@ import subprocess
 HERE = os.path.dirname(os.path.abspath(__file__))
 VIDEO = os.path.join(HERE, "skeleton.mp4")
 
-MIN_WAIT = 20 * 60   # seconds between strikes (random in this range)
-MAX_WAIT = 90 * 60
+# Settings. Every CHECK_EVERY seconds it rolls the dice, and CHANCE is the odds of a strike.
+CHECK_EVERY = 60   # seconds: 1 rolls every second, 60 every minute
+CHANCE = 1 / 60    # 1/60 a minute averages one strike an hour
 
 
 def sh(*cmd):
@@ -170,8 +171,9 @@ def main():
     except OSError:
         pass
     while True:
-        time.sleep(random.randint(MIN_WAIT, MAX_WAIT))
-        jumpscare()
+        time.sleep(CHECK_EVERY)
+        if random.random() < CHANCE:
+            jumpscare()
 
 
 if __name__ == "__main__":
